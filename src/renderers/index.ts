@@ -1,0 +1,10 @@
+export { renderAuthors }    from './authors';
+export { renderHeatmap }    from './heatmap';
+export { renderHotspots }   from './hotspots';
+export { renderBusFactor }  from './bus-factor';
+export { renderPatterns }   from './patterns';
+export { renderLanguages }  from './languages';
+export { renderGrowth }     from './growth';
+export { renderMerges }     from './merges';
+export { renderHtmlReport } from './html';
+export { renderJson }       from './json';

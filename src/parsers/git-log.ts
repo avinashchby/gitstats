@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import type { GitCommit, FileChange } from "../types";
 
 /** Options for filtering the git log range. */
@@ -38,7 +38,7 @@ function buildGitArgs(options: ParseGitLogOptions): string[] {
  */
 function runGitLog(args: string[], cwd: string): string {
   try {
-    return execSync(`git ${args.join(" ")}`, {
+    return execFileSync("git", args, {
       cwd,
       encoding: "utf8",
       stdio: ["pipe", "pipe", "pipe"],

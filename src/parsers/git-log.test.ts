@@ -1,14 +1,14 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { parseGitLog } from "./git-log";
 
 // ---------------------------------------------------------------------------
 // Mock child_process so tests run without a real git repo.
 // ---------------------------------------------------------------------------
 jest.mock("child_process", () => ({
-  execSync: jest.fn(),
+  execFileSync: jest.fn(),
 }));
 
-const mockExecSync = execSync as jest.MockedFunction<typeof execSync>;
+const mockExecFileSync = execFileSync as jest.MockedFunction<typeof execFileSync>;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -53,13 +53,13 @@ describe("parseGitLog", () => {
   // -------------------------------------------------------------------------
 
   it("returns [] for an empty repo (no stdout)", async () => {
-    mockExecSync.mockReturnValue("");
+    mockExecFileSync.mockReturnValue("");
     const result = await parseGitLog();
     expect(result).toEqual([]);
   });
 
   it("returns [] when git log exits with 'does not have any commits'", async () => {
-    mockExecSync.mockImplementation(() => {
+    mockExecFileSync.mockImplementation(() => {
       const err = new Error(
         "fatal: your current branch 'main' does not have any commits yet"
       );
@@ -70,7 +70,7 @@ describe("parseGitLog", () => {
   });
 
   it("propagates unexpected git errors", async () => {
-    mockExecSync.mockImplementation(() => {
+    mockExecFileSync.mockImplementation(() => {
       throw new Error("fatal: not a git repository");
     });
     await expect(parseGitLog()).rejects.toThrow("git log failed");
@@ -81,7 +81,7 @@ describe("parseGitLog", () => {
   // -------------------------------------------------------------------------
 
   it("parses a single commit with no file changes", async () => {
-    mockExecSync.mockReturnValue(
+    mockExecFileSync.mockReturnValue(
       makeRawLog(singleCommitRaw())
     );
 
@@ -107,7 +107,7 @@ describe("parseGitLog", () => {
       "0\t3\tsrc/old.ts",
     ].join("\n");
 
-    mockExecSync.mockReturnValue(
+    mockExecFileSync.mockReturnValue(
       makeRawLog(singleCommitRaw({ numstat }))
     );
 
@@ -128,7 +128,7 @@ describe("parseGitLog", () => {
       singleCommitRaw({ hash: "aaa111", subject: "feat: first" }),
       singleCommitRaw({ hash: "bbb222", subject: "fix: second" })
     );
-    mockExecSync.mockReturnValue(raw);
+    mockExecFileSync.mockReturnValue(raw);
 
     const commits = await parseGitLog();
     expect(commits).toHaveLength(2);
@@ -146,7 +146,7 @@ describe("parseGitLog", () => {
       "-\t-\tassets/logo.png",
     ].join("\n");
 
-    mockExecSync.mockReturnValue(
+    mockExecFileSync.mockReturnValue(
       makeRawLog(singleCommitRaw({ numstat }))
     );
 
@@ -160,7 +160,7 @@ describe("parseGitLog", () => {
 
   it("handles a commit that is ALL binary files gracefully", async () => {
     const numstat = "-\t-\tassets/icon.png";
-    mockExecSync.mockReturnValue(
+    mockExecFileSync.mockReturnValue(
       makeRawLog(singleCommitRaw({ numstat }))
     );
 
@@ -180,7 +180,7 @@ describe("parseGitLog", () => {
         subject: "Merge pull request #42 from feature/branch",
       })
     );
-    mockExecSync.mockReturnValue(raw);
+    mockExecFileSync.mockReturnValue(raw);
 
     const commits = await parseGitLog();
     expect(commits[0].filesChanged).toBe(0);
@@ -197,7 +197,7 @@ describe("parseGitLog", () => {
     const raw = makeRawLog(
       singleCommitRaw({ subject: "chore: update deps | bump lodash to 4.x" })
     );
-    mockExecSync.mockReturnValue(raw);
+    mockExecFileSync.mockReturnValue(raw);
 
     const commits = await parseGitLog();
     expect(commits[0].message).toBe("chore: update deps | bump lodash to 4.x");
@@ -208,45 +208,45 @@ describe("parseGitLog", () => {
   // -------------------------------------------------------------------------
 
   it("passes --since and --until to git", async () => {
-    mockExecSync.mockReturnValue("");
+    mockExecFileSync.mockReturnValue("");
 
     await parseGitLog({ since: "2024-01-01", until: "2024-12-31" });
 
-    expect(mockExecSync).toHaveBeenCalledTimes(1);
-    const call = (mockExecSync as jest.Mock).mock.calls[0][0] as string;
-    expect(call).toContain("--since=2024-01-01");
-    expect(call).toContain("--until=2024-12-31");
+    expect(mockExecFileSync).toHaveBeenCalledTimes(1);
+    const args = (mockExecFileSync as jest.Mock).mock.calls[0][1] as string[];
+    expect(args).toContain("--since=2024-01-01");
+    expect(args).toContain("--until=2024-12-31");
   });
 
   it("does not include --since/--until when not provided", async () => {
-    mockExecSync.mockReturnValue("");
+    mockExecFileSync.mockReturnValue("");
 
     await parseGitLog();
 
-    const call = (mockExecSync as jest.Mock).mock.calls[0][0] as string;
-    expect(call).not.toContain("--since");
-    expect(call).not.toContain("--until");
+    const args = (mockExecFileSync as jest.Mock).mock.calls[0][1] as string[];
+    expect(args.join(" ")).not.toContain("--since");
+    expect(args.join(" ")).not.toContain("--until");
   });
 
   // -------------------------------------------------------------------------
   // cwd option
   // -------------------------------------------------------------------------
 
-  it("passes cwd option to execSync", async () => {
-    mockExecSync.mockReturnValue("");
+  it("passes cwd option to execFileSync", async () => {
+    mockExecFileSync.mockReturnValue("");
 
     await parseGitLog({ cwd: "/some/repo" });
 
-    const opts = (mockExecSync as jest.Mock).mock.calls[0][1] as { cwd: string };
+    const opts = (mockExecFileSync as jest.Mock).mock.calls[0][2] as { cwd: string };
     expect(opts.cwd).toBe("/some/repo");
   });
 
   it("defaults cwd to process.cwd() when not specified", async () => {
-    mockExecSync.mockReturnValue("");
+    mockExecFileSync.mockReturnValue("");
 
     await parseGitLog();
 
-    const opts = (mockExecSync as jest.Mock).mock.calls[0][1] as { cwd: string };
+    const opts = (mockExecFileSync as jest.Mock).mock.calls[0][2] as { cwd: string };
     expect(opts.cwd).toBe(process.cwd());
   });
 
@@ -258,7 +258,7 @@ describe("parseGitLog", () => {
     const raw = makeRawLog(
       singleCommitRaw({ date: "2023-12-31T23:59:59+00:00" })
     );
-    mockExecSync.mockReturnValue(raw);
+    mockExecFileSync.mockReturnValue(raw);
 
     const commits = await parseGitLog();
     expect(commits[0].date).toBeInstanceOf(Date);
